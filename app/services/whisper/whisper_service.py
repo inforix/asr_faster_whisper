@@ -17,10 +17,11 @@ class WhisperService:
     """Faster-Whisper语音识别服务"""
     
     def __init__(self):
+        """初始化Whisper服务"""
         self.model: Optional[WhisperModel] = None
         self.is_initialized = False
         self.model_size = "large-v3"  # 升级到base模型提高精度
-        self.device = "cuda"  # 自动检测GPU/CPU
+        self.device = "auto"  # 自动检测GPU/CPU
         self.compute_type = "auto"  # 自动选择合适的计算类型
     
     async def initialize(self) -> None:
@@ -29,13 +30,27 @@ class WhisperService:
             logger.info("初始化Faster-Whisper服务...")
             logger.info(f"模型大小: {self.model_size}, 设备: {self.device}")
             
-            # 初始化Faster-Whisper模型
-            self.model = WhisperModel(
-                self.model_size,
-                device=self.device,
-                compute_type=self.compute_type,
-                download_root="./models"  # 模型下载目录
-            )
+            # 尝试初始化Faster-Whisper模型
+            try:
+                self.model = WhisperModel(
+                    self.model_size,
+                    device=self.device,
+                    compute_type=self.compute_type,
+                    download_root="./models",  # 模型下载目录
+                    local_files_only=False  # 允许下载模型
+                )
+            except Exception as download_error:
+                logger.warning(f"下载模型失败，尝试使用更小的模型: {download_error}")
+                # 如果下载失败，尝试使用tiny模型
+                self.model_size = "tiny"
+                logger.info(f"回退到更小的模型: {self.model_size}")
+                self.model = WhisperModel(
+                    self.model_size,
+                    device=self.device,
+                    compute_type=self.compute_type,
+                    download_root="./models",
+                    local_files_only=False
+                )
             
             self.is_initialized = True
             logger.info("Faster-Whisper服务初始化完成")

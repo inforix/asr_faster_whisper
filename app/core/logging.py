@@ -4,6 +4,7 @@
 
 import logging
 import sys
+import json
 
 import structlog
 
@@ -29,7 +30,9 @@ def setup_logging() -> None:
             structlog.processors.StackInfoRenderer(),
             structlog.processors.format_exc_info,
             structlog.processors.UnicodeDecoder(),
-            structlog.processors.JSONRenderer()
+            structlog.processors.JSONRenderer(
+                serializer=lambda obj, **kwargs: json.dumps(obj, ensure_ascii=False, **kwargs)
+            )
         ],
         context_class=dict,
         logger_factory=structlog.stdlib.LoggerFactory(),

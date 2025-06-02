@@ -19,7 +19,7 @@ openai_router = APIRouter()
 logger = structlog.get_logger(__name__)
 
 
-@openai_router.post("/v1/audio/transcriptions")
+@openai_router.post("/v1/audio/transcriptions", response_model=None)
 async def create_transcription(
     file: UploadFile = File(..., description="要转录的音频文件"),
     model: str = Form(..., description="要使用的模型ID，目前支持 whisper-1"),
