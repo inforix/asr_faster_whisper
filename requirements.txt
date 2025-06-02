@@ -1,0 +1,42 @@
+# Web框架
+fastapi
+uvicorn[standard]==0.34.0
+websockets==15.0.1
+
+# 语音处理
+faster-whisper
+#TTS
+torch>=2.0.0
+torchaudio>=2.0.0
+librosa==0.11.0
+soundfile==0.13.1
+numpy==2.2.6
+pydub==0.25.1
+ffmpeg-python==0.2.0
+
+# 音频处理
+phonemizer==3.3.0
+
+# HTTP客户端
+httpx==0.28.1
+requests==2.32.3
+
+# 数据验证
+pydantic==2.11.5
+pydantic-settings==2.9.1
+
+# 日志和监控
+structlog==25.3.0
+prometheus-client==0.22.0
+
+# 开发工具
+pytest==7.4.3
+pytest-asyncio==0.21.1
+black==23.11.0
+isort==5.12.0
+mypy==1.7.1
+
+# 其他工具
+python-dotenv==1.1.0
+Pillow>11.2.0
+aiofiles==24.1.0 

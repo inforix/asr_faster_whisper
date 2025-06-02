@@ -1,0 +1,138 @@
+version: '3.8'
+
+services:
+  asr-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: asr-service
+    ports:
+      - "8087:8087"
+    environment:
+      # Application Settings
+      - ENVIRONMENT=production
+      - HOST=0.0.0.0
+      - PORT=8087
+      - LOG_LEVEL=INFO
+      
+      # OpenMP Library Conflict Fix
+      - KMP_DUPLICATE_LIB_OK=TRUE
+      
+      # Model Settings
+      - WHISPER_MODEL=large-v3
+      - WHISPER_DEVICE=cpu
+      - TTS_MODEL_PATH=/app/models/tts
+      
+      # Performance Settings
+      - MAX_WORKERS=1
+      - ENABLE_METRICS=true
+      
+      # Security Settings
+      - ALLOWED_ORIGINS=["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:8087"]
+      - ALLOWED_HOSTS=["localhost", "127.0.0.1", "0.0.0.0"]
+    
+    volumes:
+      # Persist model downloads
+      - ./models:/app/models
+      # Mount logs directory for debugging
+      - ./logs:/app/logs
+      # Mount config for easy updates
+      - ./config.env:/app/config.env:ro
+    
+    restart: unless-stopped
+    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8087/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: '2.0'
+        reservations:
+          memory: 2G
+          cpus: '1.0'
+    
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    
+    # Network configuration
+    networks:
+      - asr-network
+
+  # Optional: Add a reverse proxy for production
+  nginx:
+    image: nginx:alpine
+    container_name: asr-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - asr-app
+    restart: unless-stopped
+    networks:
+      - asr-network
+    profiles:
+      - production
+
+  # Optional: Monitoring with Prometheus
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: asr-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    restart: unless-stopped
+    networks:
+      - asr-network
+    profiles:
+      - monitoring
+
+  # Optional: Grafana for metrics visualization
+  grafana:
+    image: grafana/grafana:latest
+    container_name: asr-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    networks:
+      - asr-network
+    profiles:
+      - monitoring
+
+networks:
+  asr-network:
+    driver: bridge
+
+volumes:
+  prometheus_data:
+  grafana_data: 

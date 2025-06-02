@@ -1,0 +1,43 @@
+[Unit]
+Description=ASR (Automatic Speech Recognition) Service
+Documentation=https://github.com/your-repo/asr
+After=network.target
+Wants=network.target
+
+[Service]
+Type=exec
+User=asr
+Group=asr
+WorkingDirectory=/home/jwc/develop/faster_whisper
+Environment=PYTHONPATH=/home/jwc/develop/faster_whisper
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=KMP_DUPLICATE_LIB_OK=TRUE
+EnvironmentFile=-/home/jwc/develop/faster_whisper/config.env
+ExecStart=/home/jwc/develop/faster_whisper/.venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8087 --workers 1
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=always
+RestartSec=10
+TimeoutStartSec=300
+TimeoutStopSec=60
+
+# Security settings
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/home/jwc/develop/faster_whisper/logs /home/jwc/develop/faster_whisper/models
+UMask=0022
+
+# Resource limits
+LimitNOFILE=65536
+LimitNPROC=4096
+MemoryMax=4G
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=asr
+
+[Install]
+WantedBy=multi-user.target 
