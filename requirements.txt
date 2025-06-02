@@ -5,6 +5,8 @@ websockets==15.0.1
 
 # 语音处理
 faster-whisper
+ctranslate2==4.5.0
+
 #TTS
 torch>=2.0.0
 torchaudio>=2.0.0
@@ -20,6 +22,7 @@ phonemizer==3.3.0
 # HTTP客户端
 httpx==0.28.1
 requests==2.32.3
+aiohttp==3.10.11
 
 # 数据验证
 pydantic==2.11.5
@@ -40,3 +43,5 @@ mypy==1.7.1
 python-dotenv==1.1.0
 Pillow>11.2.0
 aiofiles==24.1.0 
+
+python-multipart

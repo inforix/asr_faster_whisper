@@ -4,36 +4,194 @@
 
 import asyncio
 import json
-import logging
+from typing import Optional, Union
+from datetime import datetime
 
 from app.services.whisper.whisper_service import whisper_service
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from app.models.voice import (
+    VoiceRecognitionResponse, 
+    VoiceServiceStatus, 
+    ErrorResponse
+)
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, UploadFile, File, HTTPException, Form
+from fastapi.responses import JSONResponse
+import structlog
 
 voice_router = APIRouter()
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 # 全局音频缓冲区管理
 audio_buffers = {}
 
 
-@voice_router.get("/status")
-async def get_voice_status():
+@voice_router.get("/status", response_model=VoiceServiceStatus)
+async def get_voice_status() -> Union[VoiceServiceStatus, JSONResponse]:
     """获取语音识别服务状态"""
-    return {
-        "status": "active",
-        "service": "voice_recognition",
-        "message": "语音识别服务正常运行"
-    }
+    try:
+        status = await whisper_service.get_status()
+        return VoiceServiceStatus(
+            status="active",
+            service="voice_recognition",
+            message="语音识别服务正常运行",
+            whisper_service=status
+        )
+    except Exception as e:
+        logger.error("获取语音识别服务状态失败", error=str(e))
+        return JSONResponse(
+            status_code=503,
+            content=ErrorResponse(
+                error="service_unavailable",
+                message=f"语音识别服务异常: {str(e)}"
+            ).dict()
+        )
 
 
-@voice_router.post("/recognize")
-async def recognize_audio():
-    """语音识别接口"""
-    # TODO: 实现语音识别逻辑
-    return {
-        "message": "语音识别功能开发中",
-        "status": "not_implemented"
-    }
+@voice_router.post("/recognize", response_model=VoiceRecognitionResponse)
+async def recognize_audio(
+    audio_file: UploadFile = File(..., description="音频文件"),
+    language: Optional[str] = Form(default="zh", description="语言代码，默认为中文(zh)")
+) -> VoiceRecognitionResponse:
+    """
+    语音识别接口
+    
+    支持的音频格式：
+    - WAV, MP3, M4A, AAC, FLAC, OGG, WEBM
+    - 建议采样率：16kHz
+    - 建议声道：单声道
+    
+    Args:
+        audio_file: 上传的音频文件
+        language: 语言代码，支持 zh(中文), en(英文), auto(自动检测)
+    
+    Returns:
+        VoiceRecognitionResponse: 包含识别结果、置信度、语言等信息
+    
+    Raises:
+        HTTPException: 当服务不可用、文件格式不支持或处理失败时
+    """
+    try:
+        # 验证服务状态
+        if not whisper_service.is_initialized:
+            raise HTTPException(
+                status_code=503,
+                detail="语音识别服务未初始化，请稍后重试"
+            )
+        
+        # 验证文件类型
+        if not audio_file.content_type:
+            raise HTTPException(
+                status_code=400,
+                detail="无法确定文件类型"
+            )
+        
+        # 支持的音频MIME类型
+        supported_types = {
+            "audio/wav", "audio/wave", "audio/x-wav",
+            "audio/mpeg", "audio/mp3",
+            "audio/mp4", "audio/m4a", "audio/x-m4a",
+            "audio/aac", "audio/x-aac",
+            "audio/flac", "audio/x-flac",
+            "audio/ogg", "audio/x-ogg",
+            "audio/webm",
+            "video/webm",  # WebM可能包含音频
+            "application/octet-stream"  # 通用二进制类型
+        }
+        
+        if audio_file.content_type not in supported_types:
+            logger.warning(f"不支持的文件类型: {audio_file.content_type}")
+            # 不直接拒绝，尝试处理，因为有些浏览器可能发送错误的MIME类型
+        
+        # 验证文件大小（限制为50MB）
+        max_size = 50 * 1024 * 1024  # 50MB
+        audio_data = await audio_file.read()
+        
+        if len(audio_data) == 0:
+            raise HTTPException(
+                status_code=400,
+                detail="上传的文件为空"
+            )
+        
+        if len(audio_data) > max_size:
+            raise HTTPException(
+                status_code=413,
+                detail=f"文件过大，最大支持 {max_size // (1024*1024)}MB"
+            )
+        
+        logger.info(
+            "开始处理语音识别请求",
+            filename=audio_file.filename,
+            content_type=audio_file.content_type,
+            file_size=len(audio_data),
+            language=language
+        )
+        
+        # 调用Whisper服务进行识别
+        try:
+            result = await whisper_service.transcribe(audio_data)
+            
+            # 构建响应
+            response_data = VoiceRecognitionResponse(
+                success=True,
+                text=result["text"],
+                confidence=result["confidence"],
+                language=result["language"],
+                duration=result["duration"],
+                file_info={
+                    "filename": audio_file.filename,
+                    "content_type": audio_file.content_type,
+                    "size_bytes": len(audio_data)
+                },
+                processing_info={
+                    "segments": result.get("segments", 0),
+                    "requested_language": language,
+                    "processing_time": datetime.utcnow().isoformat()
+                }
+            )
+            
+            # 记录成功日志
+            if result["text"].strip():
+                logger.info(
+                    "语音识别成功",
+                    text_preview=result["text"][:100] + "..." if len(result["text"]) > 100 else result["text"],
+                    confidence=result["confidence"],
+                    duration=result["duration"],
+                    language=result["language"]
+                )
+            else:
+                logger.info(
+                    "语音识别完成，但未检测到语音内容",
+                    duration=result["duration"],
+                    language=result["language"]
+                )
+            
+            return response_data
+            
+        except Exception as transcribe_error:
+            logger.error(
+                "语音识别处理失败",
+                error=str(transcribe_error),
+                filename=audio_file.filename,
+                file_size=len(audio_data)
+            )
+            raise HTTPException(
+                status_code=500,
+                detail=f"语音识别处理失败: {str(transcribe_error)}"
+            )
+    
+    except HTTPException:
+        # 重新抛出HTTP异常
+        raise
+    except Exception as e:
+        logger.error(
+            "语音识别接口异常",
+            error=str(e),
+            filename=getattr(audio_file, 'filename', 'unknown'),
+            exc_info=True
+        )
+        raise HTTPException(
+            status_code=500,
+            detail=f"服务器内部错误: {str(e)}"
+        )
 
 
 @voice_router.websocket("/ws")
