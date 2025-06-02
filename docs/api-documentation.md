@@ -15,6 +15,185 @@
 
 ---
 
+## OpenAI 兼容 API
+
+### 概述
+
+为了方便集成，我们提供了与 OpenAI Audio API 完全兼容的接口。您可以直接使用 OpenAI 的客户端库或工具来访问我们的语音识别服务。
+
+### 基础信息
+
+- **基础URL**: `http://localhost:8087/v1/audio`
+- **兼容版本**: OpenAI Audio API v1
+- **支持格式**: mp3, mp4, mpeg, mpga, m4a, wav, webm
+- **最大文件大小**: 25MB（符合 OpenAI 标准）
+- **支持模型**: whisper-1
+
+---
+
+### 音频转录
+
+将音频转录为输入语言的文本，完全兼容 OpenAI Audio API。
+
+**端点**: `POST /v1/audio/transcriptions`
+
+**请求参数**:
+- `file` (文件，必需): 要转录的音频文件，最大 25MB
+- `model` (字符串，必需): 使用的模型 ID，目前支持 "whisper-1"
+- `prompt` (字符串，可选): 可选的提示文本，用于指导模型风格
+- `response_format` (字符串，可选): 响应格式，默认 "json"
+  - `json`: JSON 格式响应
+  - `text`: 纯文本响应
+  - `srt`: SRT 字幕格式
+  - `verbose_json`: 详细 JSON 格式（包含时长、语言等）
+  - `vtt`: WebVTT 字幕格式
+- `temperature` (数字，可选): 采样温度，0-1 之间，默认 0
+- `language` (字符串，可选): 输入音频的语言，ISO-639-1 格式
+
+**请求示例** (curl):
+```bash
+# JSON 格式响应
+curl -X POST "http://localhost:8087/v1/audio/transcriptions" \
+  -H "Content-Type: multipart/form-data" \
+  -F "file=@audio.wav" \
+  -F "model=whisper-1" \
+  -F "response_format=json"
+
+# 文本格式响应
+curl -X POST "http://localhost:8087/v1/audio/transcriptions" \
+  -H "Content-Type: multipart/form-data" \
+  -F "file=@audio.wav" \
+  -F "model=whisper-1" \
+  -F "response_format=text"
+
+# 详细 JSON 格式
+curl -X POST "http://localhost:8087/v1/audio/transcriptions" \
+  -H "Content-Type: multipart/form-data" \
+  -F "file=@audio.wav" \
+  -F "model=whisper-1" \
+  -F "response_format=verbose_json" \
+  -F "language=zh"
+```
+
+**响应示例**:
+
+#### JSON 格式 (`response_format=json`)
+```json
+{
+  "text": "你好，这是一段测试语音。"
+}
+```
+
+#### 详细 JSON 格式 (`response_format=verbose_json`)
+```json
+{
+  "task": "transcribe",
+  "language": "zh",
+  "duration": 3.2,
+  "text": "你好，这是一段测试语音。",
+  "segments": null
+}
+```
+
+#### 文本格式 (`response_format=text`)
+```
+你好，这是一段测试语音。
+```
+
+#### SRT 字幕格式 (`response_format=srt`)
+```
+1
+00:00:00,000 --> 00:00:03,200
+你好，这是一段测试语音。
+
+```
+
+#### WebVTT 字幕格式 (`response_format=vtt`)
+```
+WEBVTT
+
+00:00:00.000 --> 00:00:03.200
+你好，这是一段测试语音。
+
+```
+
+**错误响应格式**:
+```json
+{
+  "error": {
+    "message": "Invalid model: 'gpt-4'. Currently only 'whisper-1' is supported.",
+    "type": "invalid_request_error",
+    "param": "model",
+    "code": null
+  }
+}
+```
+
+**状态码**:
+- `200`: 转录成功
+- `400`: 请求参数错误
+- `413`: 文件过大（超过 25MB）
+- `503`: 服务不可用
+
+### OpenAI 客户端库使用示例
+
+#### Python (openai 库)
+```python
+import openai
+
+# 配置客户端指向本地服务
+client = openai.OpenAI(
+    api_key="dummy-key",  # 本地服务不需要真实 API key
+    base_url="http://localhost:8087/v1"
+)
+
+# 转录音频文件
+with open("audio.wav", "rb") as audio_file:
+    transcript = client.audio.transcriptions.create(
+        model="whisper-1",
+        file=audio_file,
+        response_format="json"
+    )
+    print(transcript.text)
+
+# 详细格式
+with open("audio.wav", "rb") as audio_file:
+    transcript = client.audio.transcriptions.create(
+        model="whisper-1",
+        file=audio_file,
+        response_format="verbose_json",
+        language="zh"
+    )
+    print(f"语言: {transcript.language}")
+    print(f"时长: {transcript.duration}秒")
+    print(f"文本: {transcript.text}")
+```
+
+#### JavaScript/Node.js
+```javascript
+import OpenAI from 'openai';
+import fs from 'fs';
+
+const openai = new OpenAI({
+  apiKey: 'dummy-key',  // 本地服务不需要真实 API key
+  baseURL: 'http://localhost:8087/v1'
+});
+
+async function transcribeAudio() {
+  const transcription = await openai.audio.transcriptions.create({
+    file: fs.createReadStream('audio.wav'),
+    model: 'whisper-1',
+    response_format: 'json'
+  });
+  
+  console.log(transcription.text);
+}
+
+transcribeAudio();
+```
+
+---
+
 ## 端点详情
 
 ### 1. 获取服务状态

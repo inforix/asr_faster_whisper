@@ -9,6 +9,7 @@ from typing import AsyncGenerator
 import structlog
 from app.api.tts import tts_router
 from app.api.voice import voice_router
+from app.api.openai_compat import openai_router
 from app.core.config import settings
 from app.core.logging import setup_logging
 from app.services.tts.tts_service import tts_service
@@ -56,7 +57,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 # 创建FastAPI应用
 app = FastAPI(
     title="海螺智能语音交互助手",
-    description="基于Faster-Whisper和Coqui TTS的智能语音交互系统",
+    description="基于Faster-Whisper和Coqui TTS的智能语音交互系统，兼容OpenAI Audio API",
     version="1.0.0",
     docs_url="/docs" if settings.ENVIRONMENT == "development" else None,
     redoc_url="/redoc" if settings.ENVIRONMENT == "development" else None,
@@ -85,6 +86,7 @@ if settings.ENABLE_METRICS:
 # 注册路由
 app.include_router(voice_router, prefix="/api/voice", tags=["语音识别"])
 app.include_router(tts_router, prefix="/api/tts", tags=["语音合成"])
+app.include_router(openai_router, tags=["OpenAI 兼容"])
 
 
 @app.get("/")

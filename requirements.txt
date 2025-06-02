@@ -5,7 +5,7 @@ websockets==15.0.1
 
 # 语音处理
 faster-whisper
-ctranslate2==4.5.0
+ctranslate2
 
 #TTS
 torch>=2.0.0
