@@ -165,8 +165,8 @@ cython_debug/
 !.vscode/tasks.json
 !.vscode/extensions.json
 
-# AI Models and Large Files
-models/
+# AI Models and Large Files (root level only)
+/models/
 *.bin
 *.safetensors
 *.onnx
@@ -202,43 +202,46 @@ models/
 *.tiff
 *.svg
 
-# Logs and Runtime Files
-logs/
-*.log
-*.out
-*.err
-log/
-temp/
-tmp/
-cache/
-.cache/
-
-# Upload and Output Directories
-uploads/
-downloads/
-output/
-results/
-audio_cache/
-model_cache/
+# Document Files
+*.pdf
+*.doc
+*.docx
+*.ppt
+*.pptx
+*.xls
+*.xlsx
 
 # Database Files
 *.db
 *.sqlite
 *.sqlite3
 
-# Configuration Files with Secrets
-config.local.env
-.env.local
-.env.production
-secrets.json
-credentials.json
+# Cache Directories
+.cache/
+.npm/
+.yarn/
+node_modules/
 
-# Docker
-.dockerignore
-docker-compose.override.yml
-.docker/
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-# System Files
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Temporary directories and files
+tmp/
+temp/
+.tmp/
+.temp/
+
+# OS Files
 .DS_Store
 .DS_Store?
 ._*
@@ -247,83 +250,91 @@ docker-compose.override.yml
 ehthumbs.db
 Thumbs.db
 
-# Backup Files
-*.bak
-*.backup
+# IDE Files
 *.swp
 *.swo
 *~
 
-# Temporary Files
-*.tmp
-*.temp
+# Backup files
+*.bak
+*.backup
+*.old
 
-# FastAPI specific
-.pytest_cache/
-htmlcov/
+# Compressed files
+*.zip
+*.tar
+*.tar.gz
+*.rar
+*.7z
 
-# Jupyter
-.ipynb_checkpoints/
+# Application specific
+uploads/
+downloads/
+output/
+results/
 
-# Node.js (if using any frontend tools)
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Monitoring and Metrics
-prometheus_data/
-grafana_data/
-
-# SSL Certificates
-*.pem
-*.key
-*.crt
-*.csr
-
-# Systemd and Service Files (keep templates, ignore local configs)
-/etc/systemd/system/asr.service
-
-# Local development overrides
-docker-compose.local.yml
+# Local configuration files that shouldn't be committed
 config.local.py
 settings.local.py
+.env.local
+.env.*.local
 
-# IDE and Editor Files
-*.sublime-project
-*.sublime-workspace
-.vscode/settings.json
-.vscode/launch.json
+# Test artifacts
+test-results/
+coverage/
+.coverage.*
 
-# OS generated files
-.fuse_hidden*
-.directory
-.Trash-*
-.nfs*
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
 
-# Windows
-*.exe
-*.msi
-*.msm
-*.msp
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
 
-# macOS
-.AppleDouble
-.LSOverride
-Icon
-._*
-.DocumentRevisions-V100
-.fseventsd
-.Spotlight-V100
-.TemporaryItems
-.Trashes
-.VolumeIcon.icns
-.com.apple.timemachine.donotpresent
-.AppleDB
-.AppleDesktop
-Network Trash Folder
-Temporary Items
-.apdisk 
+# Docker
+.dockerignore
+docker-compose.override.yml
 
-models/
-logs/
+# Kubernetes
+*.kubeconfig
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+
+# Generated documentation
+site/
+_site/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Package managers
+package-lock.json
+yarn.lock
+composer.lock
+
+# Secrets and keys
+*.key
+*.pem
+*.p12
+*.crt
+*.csr
+secrets.json
+private.json
+
+# Local scripts (if any)
+run-local.sh
+test-local.sh
+
+# Miscellaneous
+TODO.md
+NOTES.md
+scratch/
+playground/
