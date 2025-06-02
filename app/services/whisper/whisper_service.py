@@ -96,7 +96,7 @@ class WhisperService:
             "compute_type": self.compute_type,
         }
     
-    async def transcribe(self, audio_data: bytes) -> Dict[str, Any]:
+    async def transcribe(self, audio_data: bytes, realtime_mode: bool = True) -> Dict[str, Any]:
         """转录音频"""
         if not self.is_initialized or not self.model:
             raise RuntimeError("Whisper服务未初始化")
@@ -134,7 +134,50 @@ class WhisperService:
                     "duration": len(audio_array) / 16000
                 }
             
-            # 使用Faster-Whisper进行转录，调整VAD参数
+            # 计算音频统计信息用于调试
+            audio_max = np.max(np.abs(audio_array))
+            audio_rms = np.sqrt(np.mean(audio_array ** 2))
+            logger.debug(f"音频统计: 长度={len(audio_array)}, 最大值={audio_max:.3f}, RMS={audio_rms:.3f}")
+            
+            # 根据模式选择VAD参数
+            if realtime_mode:
+                # 实时模式：非常宽松的VAD参数，主要过滤明显的静音
+                vad_params = dict(
+                    min_silence_duration_ms=2000,  # 2秒静音才认为是静音段
+                    speech_pad_ms=1000,            # 1秒的语音填充
+                    threshold=0.05,                # 非常低的阈值
+                    min_speech_duration_ms=30      # 30ms最小语音时长
+                )
+                # 对于实时模式，根据音频能量决定是否使用VAD
+                if audio_max < 0.001:  # 音频信号极弱
+                    logger.debug("音频信号极弱，禁用VAD过滤")
+                    use_vad = False
+                elif audio_max < 0.01:  # 音频信号较弱，使用宽松VAD
+                    logger.debug("音频信号较弱，使用宽松VAD")
+                    use_vad = True
+                else:
+                    # 音频信号正常，使用标准VAD
+                    logger.debug("音频信号正常，使用标准VAD")
+                    use_vad = True
+            else:
+                # 文件模式：稍微严格一些的VAD参数
+                vad_params = dict(
+                    min_silence_duration_ms=1500,  # 1.5秒静音检测
+                    speech_pad_ms=800,             # 800ms填充
+                    threshold=0.1,                 # 较低的阈值
+                    min_speech_duration_ms=50      # 50ms最小语音时长
+                )
+                # 文件模式根据音频特征决定VAD使用
+                if audio_max < 0.001:
+                    logger.debug("文件音频信号极弱，禁用VAD")
+                    use_vad = False
+                else:
+                    logger.debug("文件模式使用VAD")
+                    use_vad = True
+            
+            logger.debug(f"VAD配置: enabled={use_vad}, params={vad_params}")
+            
+            # 使用Faster-Whisper进行转录
             segments, info = self.model.transcribe(
                 audio_array,
                 language="zh",  # 指定中文
@@ -142,13 +185,8 @@ class WhisperService:
                 best_of=5,
                 temperature=0.0,
                 condition_on_previous_text=False,
-                vad_filter=True,  # 启用语音活动检测
-                vad_parameters=dict(
-                    min_silence_duration_ms=100,  # 减少最小静音时长
-                    speech_pad_ms=200,  # 减少语音填充
-                    threshold=0.3,  # 降低VAD阈值，更容易检测到语音
-                    min_speech_duration_ms=100  # 最小语音时长
-                )
+                vad_filter=use_vad,  # 根据条件启用/禁用VAD
+                vad_parameters=vad_params if use_vad else None
             )
             
             # 收集所有转录片段
@@ -173,13 +211,18 @@ class WhisperService:
                 "confidence": confidence,
                 "language": info.language,
                 "duration": info.duration,
-                "segments": segment_count
+                "segments": segment_count,
+                "audio_stats": {
+                    "max_amplitude": float(audio_max),
+                    "rms": float(audio_rms),
+                    "samples": len(audio_array)
+                }
             }
             
             if transcription_text.strip():  # 只有非空结果才记录
-                logger.info(f"转录完成: '{result['text'][:50]}...' (置信度: {confidence:.3f})")
+                logger.info(f"转录完成: '{result['text'][:50]}...' (置信度: {confidence:.3f}, VAD: {use_vad})")
             else:
-                logger.debug(f"无语音内容，时长: {info.duration:.2f}秒")
+                logger.debug(f"无语音内容，时长: {info.duration:.2f}秒, VAD: {use_vad}, 音频统计: max={audio_max:.3f}, rms={audio_rms:.3f}")
             
             return result
             

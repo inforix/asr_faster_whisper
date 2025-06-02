@@ -83,6 +83,8 @@ async def test_voice_recognition_with_sample():
                     print(f"   语言: {result['language']}")
                     print(f"   时长: {result['duration']:.2f}秒")
                     print(f"   文件大小: {result['file_info']['size_bytes']} bytes")
+                    if 'debug_saved_path' in result['file_info']:
+                        print(f"   调试文件: {result['file_info']['debug_saved_path']}")
                     return True
                 else:
                     error_text = await response.text()
