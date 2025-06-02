@@ -18,9 +18,9 @@ if [ -f "config.env" ]; then
 fi
 
 # Start the FastAPI application with uvicorn
-echo "🎯 Starting FastAPI server on http://${HOST:-127.0.0.1}:${PORT:-8005}"
+echo "🎯 Starting FastAPI server on http://${HOST:-0.0.0.0}:${PORT:-8087}"
 uvicorn app.main:app \
-    --host ${HOST:-127.0.0.1} \
-    --port ${PORT:-8005} \
+    --host ${HOST:-0.0.0.0} \
+    --port ${PORT:-8087} \
     --reload \
     --log-level ${LOG_LEVEL:-info} 

@@ -5,14 +5,14 @@ websockets==15.0.1
 
 # 语音处理
 faster-whisper
-ctranslate2
+ctranslate2==4.5.0
 
 #TTS
 torch>=2.0.0
 torchaudio>=2.0.0
 librosa==0.11.0
 soundfile==0.13.1
-numpy==2.2.6
+numpy<2.0.0
 pydub==0.25.1
 ffmpeg-python==0.2.0
 
@@ -42,6 +42,6 @@ mypy==1.7.1
 # 其他工具
 python-dotenv==1.1.0
 Pillow>11.2.0
-aiofiles==24.1.0 
+aiofiles==24.1.0
 
 python-multipart

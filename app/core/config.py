@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     DEBUG: bool = Field(default=False, description="调试模式")
     SECRET_KEY: str = Field(default="your-secret-key", description="应用密钥")
     
+    # OpenMP库冲突修复 (macOS)
+    KMP_DUPLICATE_LIB_OK: str = Field(default="TRUE", description="OpenMP库冲突修复")
+    
     # 服务器配置
     HOST: str = Field(default="127.0.0.1", description="服务器地址")
     PORT: int = Field(default=8000, description="服务器端口")
@@ -103,12 +106,16 @@ class Settings(BaseSettings):
     ENABLE_MULTI_LANGUAGE: bool = Field(default=True, description="启用多语言")
     
     class Config:
-        env_file = ".env"
+        env_file = "config.env"
         env_file_encoding = "utf-8"
         case_sensitive = True
     
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        
+        # 设置OpenMP环境变量以避免库冲突
+        import os
+        os.environ['KMP_DUPLICATE_LIB_OK'] = self.KMP_DUPLICATE_LIB_OK
         
         # 自动检测设备
         if self.WHISPER_DEVICE == "auto":
