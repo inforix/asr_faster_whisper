@@ -16,7 +16,7 @@ def setup_logging() -> None:
     logging.basicConfig(
         format="%(message)s",
         stream=sys.stdout,
-        level=logging.INFO,
+        level=logging.DEBUG,
     )
     
     # 配置structlog

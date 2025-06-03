@@ -7,7 +7,7 @@ import json
 import aiofiles
 from pathlib import Path
 from typing import Optional, Union
-from datetime import datetime
+from datetime import datetime, UTC
 
 from app.services.whisper.whisper_service import whisper_service
 from app.models.voice import (
@@ -78,7 +78,7 @@ async def save_audio_file_for_debug(
         log_dir.mkdir(parents=True, exist_ok=True)
         
         # 生成时间戳
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:-3]  # 精确到毫秒
+        timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S_%f")[:-3]  # 精确到毫秒
         
         # 从原始文件名提取扩展名
         original_ext = ""
@@ -121,7 +121,7 @@ async def save_audio_file_for_debug(
         
         # 创建元数据文件
         metadata = {
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "original_filename": original_filename,
             "content_type": content_type,
             "file_size_bytes": len(audio_data),
@@ -183,7 +183,7 @@ async def save_websocket_audio_for_debug(
         log_dir.mkdir(parents=True, exist_ok=True)
         
         # 生成时间戳
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:-3]  # 精确到毫秒
+        timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S_%f")[:-3]  # 精确到毫秒
         
         # 构建文件名
         safe_client_id = "".join(c for c in client_id if c.isalnum() or c in "._-")[:30]
@@ -197,7 +197,7 @@ async def save_websocket_audio_for_debug(
         
         # 创建元数据文件
         metadata = {
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "client_id": client_id,
             "chunk_index": chunk_index,
             "is_combined": is_combined,
@@ -393,7 +393,7 @@ async def recognize_audio(
             audio_data=audio_data,
             original_filename=audio_file.filename,
             content_type=audio_file.content_type,
-            client_info=f"API_upload_{datetime.now().strftime('%H%M%S')}"
+            client_info=f"API_upload_{datetime.now(UTC).strftime('%H%M%S')}"
         )
         
         # 调用Whisper服务进行识别
@@ -416,7 +416,7 @@ async def recognize_audio(
                 processing_info={
                     "segments": result.get("segments", 0),
                     "requested_language": language,
-                    "processing_time": datetime.utcnow().isoformat()
+                    "processing_time": datetime.now(UTC).isoformat()
                 }
             )
             
@@ -493,7 +493,7 @@ async def websocket_endpoint(websocket: WebSocket):
             "type": "connection",
             "status": "connected",
             "message": "WebSocket连接成功",
-            "timestamp": "2025-06-01T03:30:00Z"
+            "timestamp": datetime.now(UTC).isoformat() + "Z"
         }))
         
         while True:
@@ -602,7 +602,7 @@ async def websocket_endpoint(websocket: WebSocket):
                                 "confidence": result["confidence"],
                                 "language": result["language"],
                                 "duration": result["duration"],
-                                "timestamp": "2025-06-01T03:30:00Z",
+                                "timestamp": datetime.now(UTC).isoformat() + "Z",
                                 "debug_info": {
                                     "audio_stats": result.get("audio_stats", {}),
                                     "chunk_count": len(buffer["chunks"]) if "chunks" in buffer else 0
@@ -624,7 +624,7 @@ async def websocket_endpoint(websocket: WebSocket):
                             error_response = {
                                 "type": "error",
                                 "message": f"语音识别失败: {str(e)}",
-                                "timestamp": "2025-06-01T03:30:00Z"
+                                "timestamp": datetime.now(UTC).isoformat() + "Z"
                             }
                             
                             try:
@@ -658,7 +658,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 try:
                     await websocket.send_text(json.dumps({
                         "type": "heartbeat",
-                        "timestamp": "2025-06-01T03:30:00Z"
+                        "timestamp": datetime.now(UTC).isoformat() + "Z"
                     }))
                 except Exception:
                     logger.warning(f"心跳发送失败，连接可能已断开: {client_id}")

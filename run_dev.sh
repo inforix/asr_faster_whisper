@@ -23,4 +23,4 @@ uvicorn app.main:app \
     --host ${HOST:-0.0.0.0} \
     --port ${PORT:-8087} \
     --reload \
-    --log-level ${LOG_LEVEL:-info} 
+    --log-level ${LOG_LEVEL:-debug} 

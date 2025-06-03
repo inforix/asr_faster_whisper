@@ -19,6 +19,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
 from prometheus_client import make_asgi_app
+from datetime import datetime, UTC
 
 # 配置结构化日志
 setup_logging()
@@ -29,6 +30,7 @@ logger = structlog.get_logger(__name__)
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """应用生命周期管理"""
     logger.info("🚀 启动海螺语音助手后端服务")
+    logger.debug("🚀 启动海螺语音助手后端服务, this is for debug")
     
     try:
         # 初始化Whisper服务
@@ -112,7 +114,7 @@ async def health_check():
         
         return {
             "status": "healthy",
-            "timestamp": structlog.get_logger().info("health_check"),
+            "timestamp": datetime.now(UTC).isoformat(),
             "services": {
                 "whisper": whisper_status,
                 "tts": tts_status,
@@ -126,7 +128,7 @@ async def health_check():
             content={
                 "status": "unhealthy",
                 "error": str(e),
-                "timestamp": structlog.get_logger().info("health_check_failed"),
+                "timestamp": datetime.now(UTC).isoformat(),
             }
         )
 
@@ -147,7 +149,7 @@ async def global_exception_handler(request: Request, exc: Exception):
         content={
             "error": "内部服务器错误",
             "message": "服务器遇到了一个错误，请稍后重试",
-            "timestamp": structlog.get_logger().info("global_exception"),
+            "timestamp": datetime.now(UTC).isoformat(),
         }
     )
 
@@ -163,6 +165,6 @@ if __name__ == "__main__":
         host=host,
         port=settings.PORT,
         reload=settings.ENVIRONMENT == "development",
-        log_level="info",
+        log_level="debug",
         access_log=True,
     ) 
